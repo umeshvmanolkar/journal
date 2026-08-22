@@ -15,9 +15,29 @@ import {
 } from './googleApi';
 
 // Keys for localStorage
-const TRADES_KEY = 'glow_journal_trades';
-const CREDENTIALS_KEY = 'glow_journal_google_creds';
-const MODE_KEY = 'glow_journal_mode'; // 'local' or 'google'
+const TRADES_KEY = 'journal_trades';
+const CREDENTIALS_KEY = 'journal_google_creds';
+const MODE_KEY = 'journal_mode'; // 'local' or 'google'
+
+// Automatic backward compatibility migration
+try {
+  const oldTrades = localStorage.getItem('hournal_trades') || localStorage.getItem('glow_journal_trades');
+  if (!localStorage.getItem(TRADES_KEY) && oldTrades) {
+    localStorage.setItem(TRADES_KEY, oldTrades);
+  }
+  
+  const oldCreds = localStorage.getItem('hournal_google_creds') || localStorage.getItem('glow_journal_google_creds');
+  if (!localStorage.getItem(CREDENTIALS_KEY) && oldCreds) {
+    localStorage.setItem(CREDENTIALS_KEY, oldCreds);
+  }
+  
+  const oldMode = localStorage.getItem('hournal_mode') || localStorage.getItem('glow_journal_mode');
+  if (!localStorage.getItem(MODE_KEY) && oldMode) {
+    localStorage.setItem(MODE_KEY, oldMode);
+  }
+} catch (e) {
+  console.warn("Storage migration failed:", e);
+}
 
 /**
  * Gets API credentials from localStorage

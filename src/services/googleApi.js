@@ -182,7 +182,7 @@ export async function uploadImageToDrive(base64Data, filename, folderId, accessT
     parents: [folderId]
   };
 
-  const boundary = 'glow_journal_multipart_boundary';
+  const boundary = 'journal_multipart_boundary';
   const delimiter = "\r\n--" + boundary + "\r\n";
   const close_delim = "\r\n--" + boundary + "--";
 

@@ -105,7 +105,7 @@ export default function App() {
           <div className="logo-icon">
             <TrendingUp size={20} />
           </div>
-          <span className="logo-text">GlowJournal</span>
+          <span className="logo-text">Journal</span>
         </div>
 
         {/* State Badges, Navigation Tabs & Options */}
