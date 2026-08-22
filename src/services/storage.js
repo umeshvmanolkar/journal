@@ -215,22 +215,45 @@ export async function syncLocalToGoogle(onProgress) {
   onProgress("Accessing Google Spreadsheet...", 40);
   const spreadsheetId = await getOrCreateSpreadsheet(token);
 
+  onProgress("Fetching existing cloud entries...", 45);
+  let remoteTrades = [];
+  try {
+    remoteTrades = await fetchTradesFromGoogle(spreadsheetId, token);
+  } catch (error) {
+    console.warn("Failed fetching remote trades, proceeding with local list only", error);
+  }
+
   const localTrades = getLocalTrades();
-  const total = localTrades.length;
   
-  onProgress(`Syncing ${total} trades. Uploading screenshots...`, 50);
+  // Merge remote and local trades (union by id) to prevent overwriting entries from other devices
+  const mergedMap = new Map();
+  remoteTrades.forEach(t => {
+    if (t && t.id) mergedMap.set(t.id, t);
+  });
+  localTrades.forEach(t => {
+    if (t && t.id) mergedMap.set(t.id, t);
+  });
+
+  const mergedTrades = Array.from(mergedMap.values()).sort((a, b) => {
+    const dateA = new Date(`${a.date}T${a.time || '12:00'}`);
+    const dateB = new Date(`${b.date}T${b.time || '12:00'}`);
+    return dateA - dateB;
+  });
+
+  const total = mergedTrades.length;
+  onProgress(`Syncing ${total} total trades. Uploading screenshots...`, 50);
 
   // Upload screenshots for each trade if they are base64 local data
   const updatedTrades = [];
   for (let i = 0; i < total; i++) {
-    const trade = localTrades[i];
+    const trade = mergedTrades[i];
     const updatedScreenshots = [];
 
     if (trade.screenshots && trade.screenshots.length > 0) {
       for (let j = 0; j < trade.screenshots.length; j++) {
         const screenshot = trade.screenshots[j];
         
-        if (screenshot.startsWith('data:')) {
+        if (screenshot && screenshot.startsWith('data:')) {
           onProgress(`Uploading screenshot ${j + 1} for trade ${trade.ticker}...`, 50 + Math.floor((i / total) * 30));
           try {
             const filename = `trade_${trade.ticker}_${trade.date}_${trade.id.substring(0, 4)}_${j}.jpg`;
