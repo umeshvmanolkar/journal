@@ -68,7 +68,8 @@ export default function App() {
 
     // Save to active storage driver
     try {
-      await saveTrades(updatedTrades);
+      const finalTrades = await saveTrades(updatedTrades);
+      setTrades(finalTrades);
     } catch (error) {
       console.error("Error saving trade:", error);
       alert("Failed syncing save data to Google. Entries cached locally.");

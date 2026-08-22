@@ -114,22 +114,52 @@ export function getLocalTrades() {
   return data ? JSON.parse(data) : [];
 }
 
-/**
- * Saves trades based on the active storage mode
- */
 export async function saveTrades(trades) {
   const mode = getStorageMode();
-  
-  // Always update local cache so there's an offline/instant copy
-  localStorage.setItem(TRADES_KEY, JSON.stringify(trades));
+  let finalTrades = [...trades];
 
   if (mode === 'google') {
     const creds = getCredentials();
     await initGoogleClients(creds.apiKey, creds.clientId);
     const token = await requestAccessToken();
+    const folderId = await getOrCreateDriveFolder(token);
+
+    // Scan all trades and upload any base64 local screenshots to Google Drive
+    for (let i = 0; i < finalTrades.length; i++) {
+      const trade = finalTrades[i];
+      if (trade.screenshots && trade.screenshots.length > 0) {
+        let updatedScreenshots = [];
+        let modified = false;
+
+        for (let j = 0; j < trade.screenshots.length; j++) {
+          const src = trade.screenshots[j];
+          if (src && src.startsWith('data:')) {
+            const filename = `trade_${trade.ticker}_${trade.date}_${trade.id.substring(0, 4)}_${j}.jpg`;
+            const driveFileId = await uploadImageToDrive(src, filename, folderId, token);
+            updatedScreenshots.push(driveFileId);
+            modified = true;
+          } else {
+            updatedScreenshots.push(src);
+          }
+        }
+
+        if (modified) {
+          finalTrades[i] = {
+            ...trade,
+            screenshots: updatedScreenshots
+          };
+        }
+      }
+    }
+
     const spreadsheetId = await getOrCreateSpreadsheet(token);
-    await saveAllTradesToGoogle(spreadsheetId, trades, token);
+    await saveAllTradesToGoogle(spreadsheetId, finalTrades, token);
   }
+
+  // Always update local cache (using the resolved GDrive file IDs)
+  localStorage.setItem(TRADES_KEY, JSON.stringify(finalTrades));
+  
+  return finalTrades;
 }
 
 /**
