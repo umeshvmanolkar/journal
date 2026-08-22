@@ -44,7 +44,11 @@ try {
  */
 export function getCredentials() {
   const data = localStorage.getItem(CREDENTIALS_KEY);
-  return data ? JSON.parse(data) : { apiKey: '', clientId: '' };
+  const localCreds = data ? JSON.parse(data) : { apiKey: '', clientId: '' };
+  return {
+    apiKey: localCreds.apiKey || import.meta.env.VITE_GOOGLE_API_KEY || '',
+    clientId: localCreds.clientId || import.meta.env.VITE_GOOGLE_CLIENT_ID || ''
+  };
 }
 
 /**
@@ -69,7 +73,7 @@ export function clearCredentials() {
 export function getStorageMode() {
   const creds = getCredentials();
   if (!creds.apiKey || !creds.clientId) return 'local';
-  return localStorage.getItem(MODE_KEY) || 'local';
+  return localStorage.getItem(MODE_KEY) || 'google';
 }
 
 /**
