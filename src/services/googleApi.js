@@ -245,6 +245,10 @@ export async function getOrCreateSpreadsheet(accessToken) {
 
   const spreadsheetId = createResponse.result.spreadsheetId;
 
+  // Get the default sheet's title dynamically (supports any locale/language)
+  const spreadsheet = await gapi.client.sheets.spreadsheets.get({ spreadsheetId });
+  const sheetName = spreadsheet.result.sheets[0].properties.title;
+
   // 3. Initialize header row
   const headers = [
     'ID', 'Date', 'Time', 'Ticker', 'Type', 
@@ -254,7 +258,7 @@ export async function getOrCreateSpreadsheet(accessToken) {
 
   await gapi.client.sheets.spreadsheets.values.update({
     spreadsheetId: spreadsheetId,
-    range: 'Sheet1!A1:M1',
+    range: `${sheetName}!A1:M1`,
     valueInputOption: 'USER_ENTERED',
     resource: {
       values: [headers]
@@ -271,9 +275,13 @@ export async function fetchTradesFromGoogle(spreadsheetId, accessToken) {
   gapi.client.setToken({ access_token: accessToken });
 
   try {
+    // Get the first sheet's title dynamically
+    const spreadsheet = await gapi.client.sheets.spreadsheets.get({ spreadsheetId });
+    const sheetName = spreadsheet.result.sheets[0].properties.title;
+
     const response = await gapi.client.sheets.spreadsheets.values.get({
       spreadsheetId: spreadsheetId,
-      range: 'Sheet1!A2:M10000', // Fetch up to 10k rows
+      range: `${sheetName}!A2:M10000`, // Fetch up to 10k rows
     });
 
     const rows = response.result.values;
@@ -302,32 +310,35 @@ export async function fetchTradesFromGoogle(spreadsheetId, accessToken) {
 
 /**
  * Saves all trades (overwrites or updates) in the spreadsheet
- * Easiest way is to overwrite Sheet1 range A2:M with full list to keep it simple and clean.
  */
 export async function saveAllTradesToGoogle(spreadsheetId, trades, accessToken) {
   gapi.client.setToken({ access_token: accessToken });
 
-  // Format trades into rows
+  // Get the first sheet's title dynamically
+  const spreadsheet = await gapi.client.sheets.spreadsheets.get({ spreadsheetId });
+  const sheetName = spreadsheet.result.sheets[0].properties.title;
+
+  // Format trades into rows, sanitizing all undefined/null fields
   const rows = trades.map(trade => [
-    trade.id,
-    trade.date,
-    trade.time || '12:00',
-    trade.ticker.toUpperCase(),
-    trade.type,
-    trade.entryPrice,
-    trade.exitPrice,
-    trade.size,
-    trade.fees,
-    trade.pnl,
-    trade.status,
-    trade.notes,
+    String(trade.id || ''),
+    String(trade.date || ''),
+    String(trade.time || '12:00'),
+    String(trade.ticker || '').toUpperCase(),
+    String(trade.type || 'BUY'),
+    Number(trade.entryPrice || 0),
+    Number(trade.exitPrice || 0),
+    Number(trade.size || 0),
+    Number(trade.fees || 0),
+    Number(trade.pnl || 0),
+    String(trade.status || 'BREAKEVEN'),
+    String(trade.notes || ''),
     trade.screenshots ? trade.screenshots.join(',') : ''
   ]);
 
   // First, clear existing sheet data (excluding header)
   await gapi.client.sheets.spreadsheets.values.clear({
     spreadsheetId: spreadsheetId,
-    range: 'Sheet1!A2:M10000',
+    range: `${sheetName}!A2:M10000`,
   });
 
   if (rows.length === 0) return;
@@ -335,7 +346,7 @@ export async function saveAllTradesToGoogle(spreadsheetId, trades, accessToken) 
   // Append new rows
   await gapi.client.sheets.spreadsheets.values.update({
     spreadsheetId: spreadsheetId,
-    range: `Sheet1!A2:M${1 + rows.length}`,
+    range: `${sheetName}!A2:M${1 + rows.length}`,
     valueInputOption: 'USER_ENTERED',
     resource: {
       values: rows
