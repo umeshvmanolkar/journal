@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { X, Trash2, ImageIcon, Plus, ChevronLeft, ChevronRight, Download, RefreshCw } from 'lucide-react';
 import { compressImage, getStorageMode, getCredentials } from '../services/storage';
 
@@ -21,6 +21,7 @@ export default function TradeModal({ trade, dateStr, onClose, onSave, onDelete }
 
   // Lightbox view state
   const [lightboxIndex, setLightboxIndex] = useState(null);
+  const blobUrlsRef = useRef([]);
 
   // Initialize fields on mount / change of active trade
   useEffect(() => {
@@ -70,6 +71,7 @@ export default function TradeModal({ trade, dateStr, onClose, onSave, onDelete }
 
       const blob = await response.blob();
       const objectUrl = URL.createObjectURL(blob);
+      blobUrlsRef.current.push(objectUrl);
       setResolvedImages(prev => ({ ...prev, [fileId]: objectUrl }));
     } catch (e) {
       console.error("Error loading drive image:", e);
@@ -81,9 +83,45 @@ export default function TradeModal({ trade, dateStr, onClose, onSave, onDelete }
   // Clean up Blob URLs on unmount
   useEffect(() => {
     return () => {
-      Object.values(resolvedImages).forEach(url => URL.revokeObjectURL(url));
+      blobUrlsRef.current.forEach(url => {
+        try {
+          URL.revokeObjectURL(url);
+        } catch (e) {
+          console.warn("Failed to revoke URL:", url, e);
+        }
+      });
     };
-  }, [resolvedImages]);
+  }, []);
+
+  // Listen for paste events (Ctrl+V) to capture clipboard screenshots directly
+  useEffect(() => {
+    const handlePaste = async (e) => {
+      const clipboardItems = e.clipboardData?.items;
+      if (!clipboardItems) return;
+
+      for (let item of clipboardItems) {
+        if (item.type.startsWith('image/')) {
+          const file = item.getAsFile();
+          if (!file) continue;
+
+          const reader = new FileReader();
+          reader.onload = async (event) => {
+            const base64 = event.target.result;
+            const compressed = await compressImage(base64);
+            setScreenshots(prev => [...prev, compressed]);
+          };
+          reader.readAsDataURL(file);
+          
+          e.preventDefault(); // Stop default text insertion
+        }
+      }
+    };
+
+    window.addEventListener('paste', handlePaste);
+    return () => {
+      window.removeEventListener('paste', handlePaste);
+    };
+  }, []);
 
   // Handle image uploads
   const handleImageUpload = async (e) => {
@@ -258,7 +296,7 @@ export default function TradeModal({ trade, dateStr, onClose, onSave, onDelete }
                 onClick={() => document.getElementById('screenshot-file-input').click()}
               >
                 <ImageIcon size={28} style={{ color: 'var(--text-secondary)', opacity: 0.6 }} />
-                <span className="image-upload-text">Drag and drop screenshots here or click to browse</span>
+                <span className="image-upload-text">Drag & drop, click to browse, or paste directly (Ctrl+V)</span>
                 <span className="image-upload-subtext">Images are compressed for faster sync</span>
                 <input 
                   id="screenshot-file-input" 
