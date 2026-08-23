@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Plus, RefreshCw, X, Edit2 } from 'lucide-react';
 
 const MONTHS = [
@@ -17,6 +17,7 @@ export default function CalendarView({ trades, onAddTrade, onEditTrade }) {
   const [loadingImages, setLoadingImages] = useState({});
   const [lightboxIndex, setLightboxIndex] = useState(null);
   const [lightboxScreenshots, setLightboxScreenshots] = useState([]);
+  const blobUrlsRef = useRef([]);
 
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth();
@@ -101,6 +102,10 @@ export default function CalendarView({ trades, onAddTrade, onEditTrade }) {
 
       const blob = await response.blob();
       const objectUrl = URL.createObjectURL(blob);
+      
+      // Store the URL in ref to allow proper unmount cleanup without breaking active renders
+      blobUrlsRef.current.push(objectUrl);
+      
       setResolvedImages(prev => ({ ...prev, [fileId]: objectUrl }));
     } catch (e) {
       console.error("Error loading drive image in sidebar:", e);
@@ -109,12 +114,18 @@ export default function CalendarView({ trades, onAddTrade, onEditTrade }) {
     }
   };
 
-  // Clean up Blob URLs on unmount
+  // Clean up Blob URLs ONLY when the component unmounts
   useEffect(() => {
     return () => {
-      Object.values(resolvedImages).forEach(url => URL.revokeObjectURL(url));
+      blobUrlsRef.current.forEach(url => {
+        try {
+          URL.revokeObjectURL(url);
+        } catch (e) {
+          console.warn("Failed to revoke URL:", url, e);
+        }
+      });
     };
-  }, [resolvedImages]);
+  }, []);
 
   // Generate calendar grid array
   const cells = [];
