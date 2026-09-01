@@ -136,72 +136,13 @@ export default function SettingsModal({ onClose, onConfigChange }) {
 
         <div className="modal-body" style={{ maxHeight: '70vh', overflowY: 'auto' }}>
           
-          {/* Storage Mode Toggle */}
+          {/* Storage Information Banner */}
           <div className="form-group glass-card" style={{ padding: '1rem', border: '1px solid rgba(255,255,255,0.05)' }}>
-            <label style={{ fontSize: '0.9rem', marginBottom: '0.5rem', display: 'block' }}>Storage Engine Mode</label>
-            <div style={{ display: 'flex', gap: '0.75rem' }}>
-              <button 
-                type="button" 
-                className={`btn ${storageMode === 'local' ? 'btn-primary' : 'btn-secondary'}`}
-                style={{ flex: 1 }}
-                onClick={() => handleToggleMode('local')}
-              >
-                Local Sandbox Mode
-              </button>
-              <button 
-                type="button" 
-                className={`btn ${storageMode === 'google' ? 'btn-primary' : 'btn-secondary'}`}
-                style={{ flex: 1 }}
-                onClick={() => handleToggleMode('google')}
-              >
-                Google Sheets Mode
-              </button>
-            </div>
-            
-            <p className="stat-desc" style={{ marginTop: '0.5rem' }}>
-              {storageMode === 'local' 
-                ? '🔒 Storing all logs and images inside your local browser memory (isolated sandbox).' 
-                : '☁️ Syncing live to Google Sheets (spreadsheet db) & Google Drive (screenshots folder).'}
+            <label style={{ fontSize: '0.9rem', marginBottom: '0.5rem', display: 'block', fontWeight: 600 }}>Direct Storage Mode</label>
+            <p className="stat-desc">
+              ☁️ All trade entries and screenshot images are stored directly in your Google Sheets and Google Drive. No trade data is saved in browser local storage or cache.
             </p>
           </div>
-
-          {/* Sync status / progress */}
-          {localTradesCount > 0 && apiKey && clientId && (
-            <div className="glass-card" style={{ border: '1px solid rgba(245, 158, 11, 0.3)', background: 'rgba(245, 158, 11, 0.03)' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <div>
-                  <h4 style={{ color: '#f59e0b', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                    <AlertTriangle size={16} />
-                    Unsynced Local Data
-                  </h4>
-                  <p className="stat-desc" style={{ color: '#d1d5db' }}>
-                    You have {localTradesCount} trade entries recorded locally in your sandbox.
-                  </p>
-                </div>
-                <button 
-                  className="btn btn-success" 
-                  disabled={syncing}
-                  onClick={handleSyncData}
-                  style={{ gap: '0.4rem', padding: '0.5rem 1rem', fontSize: '0.8rem' }}
-                >
-                  {syncing ? <RefreshCw size={14} className="animate-spin" /> : <RefreshCw size={14} />}
-                  Sync to Google
-                </button>
-              </div>
-
-              {syncing && (
-                <div style={{ marginTop: '1rem' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', marginBottom: '0.25rem' }}>
-                    <span>{syncStatus}</span>
-                    <span>{syncProgress}%</span>
-                  </div>
-                  <div style={{ background: 'rgba(255,255,255,0.1)', height: '6px', borderRadius: '3px', overflow: 'hidden' }}>
-                    <div style={{ background: 'var(--color-profit)', height: '100%', width: `${syncProgress}%`, transition: 'width 0.2s' }} />
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
 
           {/* Setup Walkthrough Tutorial */}
           <div className="settings-instructions">

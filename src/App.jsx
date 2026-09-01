@@ -48,7 +48,7 @@ export default function App() {
     setActiveTrade(trade);
   };
 
-  // Save new or updated trade log
+  // Save new or updated trade log directly to Google Sheets & Drive
   const handleSaveTrade = async (tradeData) => {
     let updatedTrades;
     const index = trades.findIndex(t => t.id === tradeData.id);
@@ -66,17 +66,17 @@ export default function App() {
     setIsAddOpen(false);
     setActiveTrade(null);
 
-    // Save to active storage driver
     try {
       const finalTrades = await saveTrades(updatedTrades);
       setTrades(finalTrades);
     } catch (error) {
       console.error("Error saving trade:", error);
-      alert("Failed syncing save data to Google. Entries cached locally.");
+      alert(`Failed to save trade to Google Sheets: ${error.message || 'Error occurred'}`);
+      loadData(); // Revert state from live cloud data
     }
   };
 
-  // Delete trade entry
+  // Delete trade entry directly from Google Sheets
   const handleDeleteTrade = async (tradeId) => {
     if (window.confirm("Are you sure you want to permanently delete this trading journal entry?")) {
       const updatedTrades = trades.filter(t => t.id !== tradeId);
@@ -87,7 +87,8 @@ export default function App() {
         await saveTrades(updatedTrades);
       } catch (error) {
         console.error("Error deleting trade:", error);
-        alert("Failed syncing deletion to Google. Cache updated locally.");
+        alert(`Failed to delete trade from Google Sheets: ${error.message || 'Error occurred'}`);
+        loadData(); // Revert state from live cloud data
       }
     }
   };
@@ -115,7 +116,7 @@ export default function App() {
           {/* Connection Status Pill */}
           <div className={`connection-badge ${storageMode === 'google' ? 'connected' : 'local'}`}>
             <span className="badge-dot"></span>
-            <span>{storageMode === 'google' ? 'Cloud Sync' : 'Local Sandbox'}</span>
+            <span>{storageMode === 'google' ? 'Google Sheets Live' : 'Cloud Setup Required'}</span>
           </div>
 
           {/* Toggle Tab View */}
